@@ -9,3 +9,6 @@ __pycache__/
 # Others
 .DS_Store
 .env
+
+# Models
+*.keras

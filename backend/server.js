@@ -199,7 +199,7 @@ app.post('/api/doctors', async (req, res) => {
       return res.status(400).json({ message: 'Hospital does not exist' });
     } 
 
-    const user = await User.findOne({ email: doctor_email });2
+    const user = await User.findOne({ email: doctor_email });
     const userRole = user.role_name;
 
     if (userRole !== 'doctor') {
@@ -214,7 +214,6 @@ app.post('/api/doctors', async (req, res) => {
     res.status(500).json({ message: 'Error creating doctor' });
   }
 });
-
 app.get('/api/doctors', async (req, res) => {
   try {
     const { hospital_id } = req.query;
@@ -241,6 +240,18 @@ app.get('/api/doctors/:id', async (req, res) => {
     res.status(500).json({ message: 'Error fetching doctor' });
   }
 });
+app.get('/api/doctors/email/:email', async (req, res) => {
+  try {
+    const doctor = await Doctors.findOne({ doctor_email: req.params.email });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    res.json(doctor);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 
 
 
@@ -261,8 +272,8 @@ app.get('/api/locations', async (req, res) => {
     const locations = await Location.find(); 
     res.json(locations);
   } catch (error) {
-    console.error('Error fetching doctors:', error);
-    res.status(500).json({ message: 'Error fetching doctors' });
+    console.error('Error fetching location:', error);
+    res.status(500).json({ message: 'Error fetching location' });
   }
 });
 app.get('/api/locations/:id', async (req, res) => {
@@ -324,21 +335,43 @@ app.post('/api/logs', async (req, res) => {
   try {
     const { patient_email, doctor_id, category_id, description } = req.body;
 
-    const patientExists = await User.exists({ email: patient_email, role_name: 'patient' });
-    const doctorExists = await Doctors.exists({ _id: doctor_id });
-    const categoryExists = await Categories.exists({ _id: category_id });
-
-    if (!patientExists ) {
-        return res.status(400).json({ message: 'Patient does not exist or is not a patient' });
+    // Validate required fields
+    if (!patient_email || !doctor_id || !category_id || !description) {
+      return res.status(400).json({ message: 'All fields are required' });
     }
-    if (!doctorExists) {
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(patient_email)) {
+      return res.status(400).json({ message: 'Invalid patient email format' });
+    }
+
+    // Check if patient exists and is a patient
+    const patient = await User.findOne({ email: patient_email, role_name: 'patient' });
+    if (!patient) {
+      return res.status(400).json({ message: 'Patient does not exist or is not a patient' });
+    }
+
+    // Check if doctor exists
+    const doctor = await Doctors.findById(doctor_id);
+    if (!doctor) {
       return res.status(400).json({ message: 'Doctor does not exist' });
     }
-    if (!categoryExists) {
+
+    // Check if category exists
+    const category = await Categories.findById(category_id);
+    if (!category) {
       return res.status(400).json({ message: 'Category does not exist' });
     }
 
-    const log = await Logs.create({ _id: new mongoose.Types.ObjectId(), patient_email, doctor_id, category_id, description });
+    // Create the log
+    const log = await Logs.create({ 
+      _id: new mongoose.Types.ObjectId(), 
+      patient_email, 
+      doctor_id, 
+      category_id, 
+      description 
+    });
+
     res.status(201).json(log);
   } catch (error) {
     console.error('Error creating log:', error);
@@ -354,6 +387,7 @@ app.get('/api/logs', async (req, res) => {
     res.status(500).json({ message: 'Error fetching logs' });
   }
 });
+
 app.get('/api/logs/:email', async (req, res) => {
   try {
     const patient_email = req.params.email; // Access email from URL params
@@ -397,11 +431,23 @@ app.post('/api/appointments', async (req, res) => {
 });
 app.get('/api/appointments', async (req, res) => {
   try {
-      const appointments = await Appointment.find();
-      res.json(appointments);
+    const { patient_email, doctor_id } = req.query;
+    let query = {};
+    
+    if (patient_email) {
+      query.patient_email = patient_email;
+    }
+    
+    if (doctor_id) {
+      query.doctor_id = doctor_id;
+    }
+    
+    const appointments = await Appointment.find(query)
+      .sort({ date: 1 }); // Sort by date ascending
+    
+    res.json(appointments);
   } catch (error) {
-      console.error('Error fetching appointments:', error);
-      res.status(500).json({ message: 'Error fetching appointments' });
+    res.status(500).json({ message: error.message });
   }
 });
 app.get('/api/appointments/:email', async (req, res) => {
@@ -416,3 +462,43 @@ app.get('/api/appointments/:email', async (req, res) => {
       res.status(500).json({ message: `Error fetching appointments for ${email}` });
   }
 });
+app.delete('/api/appointments/:id', async (req, res) => {
+  try {
+    // Validate ID format
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid appointment ID' });
+    }
+
+    const deletedAppointment = await Appointment.findByIdAndDelete(req.params.id);
+    if (!deletedAppointment) {
+      return res.status(404).json({ message: 'Appointment not found' });
+    }
+    res.json({ message: 'Appointment deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting appointment:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+
+app.get('/email/:email', async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ doctor_email: req.params.email });
+    if (!doctor) return res.status(404).json({ message: 'Doctor not found' });
+    res.json(doctor);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+app.get('/by-email/:email', async (req, res) => {
+  try {
+    const doctor = await Doctor.findOne({ doctor_email: req.params.email });
+    if (!doctor) {
+      return res.status(404).json({ message: 'Doctor not found' });
+    }
+    res.json(doctor);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+

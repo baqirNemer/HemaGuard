@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Typography, Avatar, Container, Box, Paper, Drawer, List, ListItem, ListItemText } from '@mui/material';
+import { Typography, Container, Box, Paper, IconButton, List, ListItem, ListItemText } from '@mui/material';
 import ResponsiveAppBar from './components/Navbar';
 import ContainedButtons from './components/Button';
 import { useNavigate } from 'react-router-dom';
-import SearchBar from './components/SearchBar_filter';
+import DoctorView from './components/DoctorView';
+import PatientView from './components/PatientView';
+import DeleteIcon from '@mui/icons-material/Delete';
+import HealthAssistant from './components/HealthAssistant';
+import axios from 'axios';
 
 function Profile() {
   const [userDetails, setUserDetails] = useState(null);
@@ -15,9 +19,28 @@ function Profile() {
   const [filteredLogs, setFilteredLogs] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState('category');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRecord, setSelectedRecord] = useState(null); // NEW: to hold selected log
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [categories, setCategories] = useState([]);
+  const [newRecord, setNewRecord] = useState({
+    patient_email: '',
+    category_id: '',
+    description: ''
+  });
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/categories');
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   useEffect(() => {
     const fetchUserAppointments = async () => {
@@ -46,7 +69,6 @@ function Profile() {
         console.error('Error fetching user appointments or doctor details:', error);
       }
     };
-
     fetchUserAppointments();
   }, []);
 
@@ -62,9 +84,12 @@ function Profile() {
         const locationData = await locationResponse.json();
         setLocationDetails(locationData);
 
-        const logsResponse = await fetch(`http://localhost:3001/api/logs/${userEmail}`);
-        const logsData = await logsResponse.json();
+        const logsEndpoint = userData.role_name === 'doctor'
+          ? `http://localhost:3001/api/doctor-logs/${userEmail}`
+          : `http://localhost:3001/api/logs/${userEmail}`;
 
+        const logsResponse = await fetch(logsEndpoint);
+        const logsData = await logsResponse.json();
         const doctorIds = [...new Set(logsData.map(log => log.doctor_id))];
         const updatedLogsMap = {};
 
@@ -106,7 +131,6 @@ function Profile() {
         console.error('Error fetching user details or related data:', error);
       }
     };
-
     fetchUserDetails();
   }, []);
 
@@ -164,10 +188,132 @@ function Profile() {
     setSelectedRecord(log);
   };
 
+  const handleNewRecordChange = (e) => {
+    const { name, value } = e.target;
+    setNewRecord(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleAddRecord = async () => {
+    try {
+      if (!newRecord.patient_email?.trim()) {
+        throw new Error('Patient email is required');
+      }
+      if (!newRecord.category_id) {
+        throw new Error('Category is required');
+      }
+      if (!newRecord.description?.trim()) {
+        throw new Error('Description is required');
+      }
+
+      const recordData = {
+        patient_email: newRecord.patient_email.trim(),
+        doctor_id: "66354f359d4d18b6e9468302",
+        category_id: newRecord.category_id,
+        description: newRecord.description.trim()
+      };
+
+      const response = await fetch('http://localhost:3001/api/logs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(recordData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to add record');
+      }
+
+      const responseData = await response.json();
+      setLogs(prevLogs => [...prevLogs, responseData]);
+      setNewRecord({ patient_email: '', category_id: '', description: '' });
+      alert('Record added successfully!');
+
+    } catch (error) {
+      console.error('Error:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
+
+  const handleDeleteAppointment = async (appointmentId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.delete(
+        `http://localhost:3001/api/appointments/${appointmentId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        setUserAppointments(prev => prev.filter(a => a._id !== appointmentId));
+        alert('Appointment canceled successfully');
+      }
+    } catch (error) {
+      console.error('Detailed error:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
+      alert(`Error: ${error.response?.data?.message || error.message}`);
+    }
+  };
+
+  const [doctorAppointments, setDoctorAppointments] = useState([]);
+  useEffect(() => {
+    const fetchDoctorAppointments = async () => {
+      try {
+        const userEmail = localStorage.getItem('useremail');
+        const doctorResponse = await fetch(
+          `http://localhost:3001/api/doctors/email/${encodeURIComponent(userEmail)}`
+        );
+        if (!doctorResponse.ok) {
+          throw new Error('Failed to fetch doctor info');
+        }
+        const doctor = await doctorResponse.json();
+        const appointmentsResponse = await fetch(
+          `http://localhost:3001/api/appointments?doctor_id=${doctor._id}`
+        );
+        if (!appointmentsResponse.ok) {
+          throw new Error('Failed to fetch appointments');
+        }
+        const appointmentsData = await appointmentsResponse.json();
+        setDoctorAppointments(appointmentsData);
+      } catch (error) {
+        console.error('Error fetching doctor appointments:', error);
+      }
+    };
+
+    if (userDetails?.role_name === 'doctor') {
+      fetchDoctorAppointments();
+    }
+  }, [userDetails]);
+
+  // --------- SIDEBAR LOGIC STARTS HERE ---------
+  const sidebarSections = userDetails?.role_name === 'doctor'
+    ? [
+        { key: 'profile', label: 'Profile' },
+        { key: 'records', label: 'Create Record' }
+      ]
+    : [
+        { key: 'profile', label: 'Profile' },
+        { key: 'records', label: 'Records' },
+        { key: 'appointments', label: 'Appointments' },
+        { key: 'assistant', label: 'Health Assistant' }
+      ];
+
+  // --------- MAIN CONTENT ---------
   const renderProfileSection = () => (
-    <Container maxWidth="sm">
+    <Container Width='80%'>
       {selectedSection === 'profile' && userDetails && (
-        <Box sx={{ display: 'flex', alignItems: 'center', marginTop: '100px' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', marginTop: '100px', marginLeft:'20%' }}>
           <Box>
             <img alt="User Avatar" src={userDetails.image} style={{ width: 300, height: 300 }} />
           </Box>
@@ -189,111 +335,36 @@ function Profile() {
       )}
 
       {selectedSection === 'records' && (
-        <Paper mt={4} sx={{marginTop: '100px', alignItems: 'center'}}>
-          <Typography variant="h4" gutterBottom>Records</Typography>
-          {!selectedRecord && (
-            <>
-              <SearchBar onSearchChange={handleSearchChange} categoryNames={['Category', 'Hospital', 'Doctor Email']} />
-              {filteredLogs.length > 0 ? (
-                <List>
-                  {filteredLogs.map(log => (
-                    <ListItem button key={log._id} onClick={() => handleRecordClick(log)} divider>
-                      <ListItemText
-                        primary={`Category: ${categoryNames[log.category_id] || 'Unknown'}`}
-                        style={{ width: '175px' }}
-                      />
-                      <ListItemText
-                        primary={`Hospital: ${log.hospital}`}
-                        secondary={`Doctor Email: ${log.doctor_email}`}
-                        style={{ width: '345px' }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              ) : (
-                <Typography>No records found.</Typography>
-              )}
-            </>
-          )}
-
-          {selectedRecord && (
-            <Box sx={{ textAlign: 'left', pl: 2 }}>
-              
-              {/* Record Metadata */}
-              <Box sx={{ mt: 3 }}>
-                <Typography><strong>Category:</strong> {categoryNames[selectedRecord.category_id] || 'Unknown'}</Typography>
-                <Typography><strong>Doctor Email:</strong> {selectedRecord.doctor_email}</Typography>
-                <Typography><strong>Hospital:</strong> {selectedRecord.hospital}</Typography>
-                <Typography><strong>Date:</strong> {formatDate(selectedRecord.createdAt)}</Typography>
-              </Box>
-
-              {/* Doctor's Notes Section */}
-              <Box sx={{ mb: 4, mt:3 }}>
-                <Typography variant="h6" gutterBottom>Doctor's Notes</Typography>
-                <Paper elevation={3} sx={{ p: 2, backgroundColor: '#f5f5f5', ml:-2  }}>
-                  {selectedRecord.description.includes('[DoctorNote:"') ? (
-                    <Typography>
-                      {selectedRecord.description.split('[DoctorNote:"')[1].split('"]')[0]}
-                    </Typography>
-                  ) : (
-                    <Typography>No doctor notes available</Typography>
-                  )}
-                </Paper>
-              </Box>
-
-              {/* Blood Test Results Section */}
-              <Box>
-                <Typography variant="h6" gutterBottom>Blood Test Results</Typography>
-                <Paper elevation={3} sx={{ p: 2, ml:-2 }}>
-                  {selectedRecord.description.includes('{Bloodtest}') ? (
-                    <Box sx={{ 
-                      display: 'grid', 
-                      gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', 
-                      gap: 2 
-                    }}>
-                      {selectedRecord.description
-                        .split('{Bloodtest}')[1]  // Get everything after {Bloodtest}
-                        .split(']')[0]            // Get everything before the closing ]
-                        .split('/')               // Split by parameters
-                        .filter(item => item.includes(':'))  // Only include items with values
-                        .map(item => {
-                          // Clean up each parameter-value pair
-                          const [parameter, value] = item.split(':').map(s => s.replace(/"/g, '').trim());
-                          return (
-                            <Box key={parameter} sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography sx={{ fontWeight: 'bold' }}>{parameter}:</Typography>
-                              <Typography>{value}</Typography>
-                            </Box>
-                          );
-                        })}
-                    </Box>
-                  ) : (
-                    <Typography>No blood test results available</Typography>
-                  )}
-                </Paper>
-              </Box>
-
-              <Box sx={{ mb: 4, mt:3 }}>
-                <Typography variant="h6" gutterBottom>AI Predicted Result</Typography>
-                <Paper elevation={3} sx={{ p: 2, backgroundColor: '#f5f5f5', ml:-2  }}>
-                  {selectedRecord.description.includes('[DoctorNote:"') ? (
-                    <Typography>
-                      {selectedRecord.description.split('[DoctorNote:"')[1].split('"]')[0]}
-                    </Typography>
-                  ) : (
-                    <Typography>No doctor notes available</Typography>
-                  )}
-                </Paper>
-              </Box>
-
-              <ContainedButtons 
-                text="Back to Records" 
-                onClick={() => setSelectedRecord(null)} 
-                sx={{ mt: 3 }}
-              />
-            </Box>
-          )}
-        </Paper>
+        userDetails?.role_name === 'doctor' ? (
+          <DoctorView
+            logs={logs}
+            categoryNames={categoryNames}
+            categories={categories}
+            filteredLogs={filteredLogs}
+            selectedRecord={selectedRecord}
+            newRecord={newRecord}
+            handleNewRecordChange={handleNewRecordChange}
+            handleAddRecord={handleAddRecord}
+            handleRecordClick={handleRecordClick}
+            handleSearchChange={handleSearchChange}
+            setSelectedRecord={setSelectedRecord}
+            formatDate={formatDate}
+            appointments={doctorAppointments}
+            handleDeleteAppointment={handleDeleteAppointment}
+            title="Create Record"
+          />
+        ) : (
+          <PatientView
+            logs={logs}
+            categoryNames={categoryNames}
+            filteredLogs={filteredLogs}
+            selectedRecord={selectedRecord}
+            handleRecordClick={handleRecordClick}
+            handleSearchChange={handleSearchChange}
+            setSelectedRecord={setSelectedRecord}
+            formatDate={formatDate}
+          />
+        )
       )}
 
       {selectedSection === 'appointments' && (
@@ -302,16 +373,38 @@ function Profile() {
           {userAppointments.length > 0 ? (
             <List>
               {userAppointments.map(appointment => (
-                <ListItem key={appointment._id} divider>
+                <ListItem 
+                  key={appointment._id} 
+                  divider
+                  secondaryAction={
+                    <IconButton 
+                      edge="end" 
+                      aria-label="delete"
+                      onClick={() => {
+                        if (window.confirm('Are you sure you want to cancel this appointment?')) {
+                          handleDeleteAppointment(appointment._id);
+                        }
+                      }}
+                      color="error"
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  }
+                >
                   <ListItemText
                     primary={`Date: ${formatDate(appointment.date)}`}
-                    secondary={`Details: ${appointment.description}`}
+                    secondary={`Time: ${appointment.time}`}
                     style={{ width: '200px' }}
                   />
                   <ListItemText
                     primary={`Hospital: ${appointment.hospital}`}
-                    secondary={`Doctor Email: ${appointment.doctor_email}`}
+                    secondary={`Doctor: ${appointment.doctor_email}`}
                     style={{ width: '400px' }}
+                  />
+                  <ListItemText
+                    primary={`Status: ${appointment.status}`}
+                    secondary={`Reason: ${appointment.description}`}
+                    style={{ width: '300px' }}
                   />
                 </ListItem>
               ))}
@@ -320,6 +413,13 @@ function Profile() {
             <Typography>No appointments found.</Typography>
           )}
         </Paper>
+      )}
+
+      {selectedSection === 'assistant' && (
+        <Container maxWidth="80%" sx={{ mt: 10 }}>
+          <Typography variant="h4" gutterBottom>Health Assistant</Typography>
+          <HealthAssistant />
+        </Container>
       )}
     </Container>
   );
@@ -336,10 +436,10 @@ function Profile() {
           }}
         >
           <List>
-            {['profile', 'records', 'appointments'].map(section => (
-              <ListItem 
-                key={section} 
-                onClick={() => handleSectionClick(section)}
+            {sidebarSections.map(section => (
+              <ListItem
+                key={section.key}
+                onClick={() => handleSectionClick(section.key)}
                 sx={{
                   color: 'white',
                   '&:hover': {
@@ -347,13 +447,16 @@ function Profile() {
                   }
                 }}
               >
-                <ListItemText 
-                  primary={section.charAt(0).toUpperCase() + section.slice(1)} 
-                  primaryTypographyProps={{ color: 'inherit' }}
+                <ListItemText
+                  primary={section.label}
+                  primaryTypographyProps={{
+                    fontWeight: selectedSection === section.key ? 'bold' : 'normal',
+                    color: 'white'
+                  }}
                 />
               </ListItem>
             ))}
-            <ListItem 
+            <ListItem
               onClick={handleLogoutClick}
               sx={{
                 color: 'white',
@@ -362,15 +465,17 @@ function Profile() {
                 }
               }}
             >
-              <ListItemText 
-                primary="Logout" 
-                primaryTypographyProps={{ color: 'inherit' }}
+              <ListItemText
+                primary="Logout"
+                primaryTypographyProps={{
+                  fontWeight: 'bold',
+                  color: 'white'
+                }}
               />
             </ListItem>
           </List>
         </Box>
-
-        <Box sx={{ flexGrow: 1, p: 3 }}>
+        <Box sx={{ flexGrow: 1 }}>
           {renderProfileSection()}
         </Box>
       </Box>

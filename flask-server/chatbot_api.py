@@ -1,16 +1,12 @@
+# chatbot_api.py (Blueprint File)
 from flask import Blueprint, request, jsonify
-import os
-import sys
-
-# Ensure the chatbot code is importable
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
-# Import your chatbot chain
-from Chatbot import chain  
+from flask_cors import cross_origin
+from Chatbot import chain  # Import your chatbot chain
 
 chatbot_api = Blueprint('chatbot_api', __name__)
 
-@chatbot_api.route('/chat', methods=['POST'])
+@chatbot_api.route('/chat', methods=['POST', 'OPTIONS'])
+@cross_origin()  # Enable CORS for this specific route
 def chat():
     data = request.get_json()
     user_message = data.get('message', '')
@@ -19,11 +15,6 @@ def chat():
 
     try:
         response = chain.invoke(user_message)
-        # If response is a dict or object, convert to string
-        if isinstance(response, dict):
-            response_text = response.get("output", str(response))
-        else:
-            response_text = str(response)
-        return jsonify({'response': response_text})
+        return jsonify({'response': str(response)})
     except Exception as e:
         return jsonify({'error': str(e)}), 500

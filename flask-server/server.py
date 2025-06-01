@@ -14,6 +14,9 @@ load_dotenv()
 
 from pdf_extraction_prediction import process_pdf
 
+from chatbot_api import chatbot_api 
+
+
 img_width, img_height = 224, 224
 img_labels = ['blood', 'non-blood']
 classification_model_path = 'models/BloodTest_Classification_model_ResNet152V2.keras'
@@ -196,6 +199,10 @@ def serve_upload_file(filename):
 @app.route('/detection/<filename>')
 def serve_detection_file(filename):
     return send_from_directory(DETECTION_OUTPUT_FOLDER, filename)
+
+
+CORS(app, resources={r"/chat": {"origins": "http://localhost:3000"}})  # Explicit CORS
+app.register_blueprint(chatbot_api)  # Register blueprint
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5001)

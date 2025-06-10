@@ -8,6 +8,7 @@ from langchain.agents import Tool, AgentExecutor, create_react_agent
 from langchain_community.tools import DuckDuckGoSearchRun
 from typing import Dict, Any
 import json
+import re
 
 # Initialize API key and LLM
 try:
@@ -59,22 +60,33 @@ except Exception as e:
 
 MEDICAL_ASSISTANT_PROMPT = """You are HemaguardGPT, an AI medical assistant specializing in blood diseases and hematology. 
 Your role is to help patients understand their blood test results while emphasizing the importance of professional medical advice.
-Only use the response structure specified below when analyzing a CBC blood test record. Otherwise, feel free to structure the response according to the user query.
-Always wish the patient a speedy recovery or a healthy life at the end of your response depending on the context of his query.
 
-**Guidelines:**
-1. For general questions: Provide concise, accurate information (3-5 sentences)
-2. For CBC analysis requests:
-   - Cross-reference patient data with normal ranges
-   - Highlight significant abnormalities
-   - Consider doctor's notes, and expand upon them where needed
-   - Suggest possible interpretations and diagnoses, without going against the official test results
-3. Should you require additional information in either scenario, always check authoritative sources and websites
-4. Always tell the patient to refer to his doctor for any next steps
-5. Cite your sources when using external information
+**Patient Records:**
+{patient_records}
 
-**Patient Database:**
-{patient_data}
+**Guidelines for Record Analysis:**
+1. Extract and analyze all available medical information from the records
+2. Pay special attention to:
+   - Doctor's notes (marked with [DoctorNote:])
+   - Blood test results (marked with {{Bloodtest}})
+   - Infection types
+   - Anemia types and names
+   - Deficiency types
+3. Cross-reference patient data with normal ranges
+4. Highlight significant abnormalities
+5. Consider doctor's notes and expand upon them where needed
+6. Suggest possible interpretations and diagnoses, without going against the official test results
+7. Always tell the patient to refer to their doctor for any next steps
+
+**For general questions:** Provide concise, accurate information (3-5 sentences)
+
+**For record analysis requests:**
+[Summary of findings from records]
+[Key abnormalities and their significance]
+[Possible considerations based on records]
+[Explanation of doctor's notes]
+[Recommended next steps based on records]
+[Sources if applicable]
 
 **Units and Ranges Database:**
 {units_ranges_data}
@@ -85,13 +97,7 @@ Always wish the patient a speedy recovery or a healthy life at the end of your r
 **User Query:**
 {text}
 
-**Response Structure:**
-[Summary of findings]
-[Key abnormalities]
-[Possible considerations]
-[Doctor's note explanation]
-[Recommended next steps]
-[Sources if applicable]"""
+**Always wish the patient a speedy recovery or a healthy life at the end of your response depending on the context.**"""
 
 prompt = ChatPromptTemplate.from_messages(
     [("system", MEDICAL_ASSISTANT_PROMPT), ("user", "{text}")]
@@ -155,11 +161,21 @@ def read_units_ranges(file_path: str) -> Dict[str, Dict[str, Any]]:
         print(f"Error reading units/ranges: {str(e)}")
         return {}
 
+def extract_patient_records(text: str) -> str:
+    """Extract patient records from the input text if present"""
+    if "User Records:" in text:
+        records_part = text.split("User Records:")[1].split("User Query:")[0].strip()
+        return records_part
+    return ""
+
 def get_patient_data(text: str) -> str:
-    """Extract patient data if the query is about CBC analysis"""
+    """Extract patient data if the query is about CBC analysis or records are present"""
+    records = extract_patient_records(text)
+    if records:
+        return records
+        
     cbc_keywords = ['cbc', 'blood test', 'blood results', 'complete blood count']
     if any(keyword in text.lower() for keyword in cbc_keywords):
-        # Get absolute path to ensure file is found
         current_dir = os.path.dirname(os.path.abspath(__file__))
         patient_file = os.path.join(current_dir, 'patient_data.json')
         
@@ -167,7 +183,6 @@ def get_patient_data(text: str) -> str:
         if not patient_data:
             return "Patient data currently unavailable"
             
-        # Format the data for display
         formatted_data = []
         for key, value in patient_data.items():
             if isinstance(value, bool):
@@ -179,8 +194,7 @@ def get_patient_data(text: str) -> str:
 def get_units_ranges_data(text: str) -> str:
     """Extract units and ranges if the query is about CBC analysis"""
     cbc_keywords = ['cbc', 'blood test', 'blood results', 'complete blood count']
-    if any(keyword in text.lower() for keyword in cbc_keywords):
-        # Get absolute path to ensure file is found
+    if any(keyword in text.lower() for keyword in cbc_keywords) or extract_patient_records(text):
         current_dir = os.path.dirname(os.path.abspath(__file__))
         ranges_file = os.path.join(current_dir, 'units_ranges.json')
         
@@ -188,7 +202,6 @@ def get_units_ranges_data(text: str) -> str:
         if not units_ranges:
             return "Reference ranges currently unavailable"
             
-        # Format the data for display
         formatted_data = []
         for test, info in units_ranges.items():
             units = info.get('units', 'N/A')
@@ -210,7 +223,7 @@ def get_units_ranges_data(text: str) -> str:
 try:
     chain = (
         {
-            "patient_data": RunnablePassthrough() | get_patient_data,
+            "patient_records": RunnablePassthrough() | get_patient_data,
             "units_ranges_data": RunnablePassthrough() | get_units_ranges_data,
             "context": RunnablePassthrough() | search_for_context,
             "text": RunnablePassthrough()
@@ -234,8 +247,16 @@ except Exception as e:
 # Test the chain if this file is run directly
 if __name__ == "__main__":
     try:
+        test_records = """[DoctorNote:"Patient shows signs of iron deficiency"]
+[{{Bloodtest}}GENDER:"0"/WBC:"20.87"/NE:"18.43"/LY:"1.56"/MO:"0.8"/EO:"0.08"/RBC:"5.2"/HGB:"8.62"/MCV:"70.11"/MCH:"19.23"/MCHC:"29.67"/FERRITTE:"40.56"/FOLATE:"9.75"/B12:"175.89"]
+[InfectionType:{"BACTERIAL INFECTION":true}]
+[AnemiaType:{"HYPOCHROMIC ANEMIA":true,"MICROCYTIC ANEMIA":true}]
+[DeficiencyType:{"VITAMIN B12 DEFICIENCY":true}]
+[AnemiaName:{"ANEMIA OF CHRONIC DISEASE":true}]"""
+        
         test_queries = [
-            "Hello! Can you help me analyze my latest CBC blood test results and give me recommendations?",
+            f"User Records:\n{test_records}\n\nUser Query: Can you analyze my records?",
+            f"User Records:\n{test_records}\n\nUser Query: What do my blood test results mean?",
             "Hello! What are your top 5 recommendations for a male patient suffering from SCD?",
             "Hi, how are you?"
         ]

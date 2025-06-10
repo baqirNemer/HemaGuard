@@ -1,0 +1,88 @@
+{
+  "WBC": {
+    "units": "10⁹/L",
+    "normal_range": {
+      "All": "4.5-11.0"
+    }
+  },
+  "NE": {
+    "units": "10⁹/L",
+    "normal_range": {
+      "All": "1.5-8.0"
+    }
+  },
+  "LY": {
+    "units": "10⁹/L",
+    "normal_range": {
+      "All": "1.0-4.8"
+    }
+  },
+  "MO": {
+    "units": "10⁹/L",
+    "normal_range": {
+      "All": "0.2-0.9"
+    }
+  },
+  "EO": {
+    "units": "10⁹/L",
+    "normal_range": {
+      "All": "0.03-0.5"
+    }
+  },
+  "RBC": {
+    "units": "10⁶/μL or M/μL",
+    "normal_range": {
+      "Males": "4.7-6.1",
+      "Females": "4.2-5.4"
+    }
+  },
+  "HGB": {
+    "units": "g/dL",
+    "normal_range": {
+      "Males": "13.8-17.2",
+      "Females": "12.1-15.1"
+    }
+  },
+  "MCV": {
+    "units": "fL",
+    "normal_range": {
+      "All": "80-100"
+    }
+  },
+  "MCH": {
+    "units": "pg/cell",
+    "normal_range": {
+      "All": "26-33"
+    }
+  },
+  "MCHC": {
+    "units": "g/dl",
+    "normal_range": {
+      "All": "32-36"
+    }
+  },
+  "MENTZER_INDEX": {
+    "units": null,
+    "normal_range": {
+      "Interpretation": ">13 means likelihood of IDA (Iron Deficiency Anemia) while <13 indicates likelihood of Sickle Beta Thalassemia"
+    }
+  },
+  "FERRITTE": {
+    "units": "ng/mL",
+    "normal_range": {
+      "All": "32-36"
+    }
+  },
+  "FOLATE": {
+    "units": "ng/mL",
+    "normal_range": {
+      "All": "32-36"
+    }
+  },
+  "B12": {
+    "units": "pg/mL",
+    "normal_range": {
+      "All": "32-36"
+    }
+  }
+}

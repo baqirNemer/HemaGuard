@@ -248,7 +248,7 @@ except Exception as e:
 if __name__ == "__main__":
     try:
         test_records = """[DoctorNote:"Patient shows signs of iron deficiency"]
-[{{Bloodtest}}GENDER:"0"/WBC:"20.87"/NE:"18.43"/LY:"1.56"/MO:"0.8"/EO:"0.08"/RBC:"5.2"/HGB:"8.62"/MCV:"70.11"/MCH:"19.23"/MCHC:"29.67"/FERRITTE:"40.56"/FOLATE:"9.75"/B12:"175.89"]
+[{{Bloodtest}}GENDER:"0"/WBC:"20.87"/NE:"18.43"/LY:"1.56"/MO:"0.8"/EO:"0.08"/RBC:"5.2"/HGB:"8.62"/MCV:"70.11"/MCH:"19.23"/MCHC:"29.67"/FERRITIN:"40.56"/FOLATE:"9.75"/B12:"175.89"]
 [InfectionType:{"BACTERIAL INFECTION":true}]
 [AnemiaType:{"HYPOCHROMIC ANEMIA":true,"MICROCYTIC ANEMIA":true}]
 [DeficiencyType:{"VITAMIN B12 DEFICIENCY":true}]

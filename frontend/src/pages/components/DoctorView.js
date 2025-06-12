@@ -214,7 +214,7 @@ const DoctorRecordsView = () => {
     const bloodTestParams = [
       'GENDER', 'WBC', 'NE', 'LY', 'MO', 'EO', 'BA', 'RBC', 
       'HGB', 'HCT', 'MCV', 'MCH', 'MCHC', 'RDW', 'PLT', 'MPV', 
-      'PCT', 'PDW', 'SD', 'SDTSD', 'TSD', 'FERRITTE', 'FOLATE', 'B12'
+      'PCT', 'PDW', 'SD', 'SDTSD', 'TSD', 'FERRITIN', 'FOLATE', 'B12'
     ];
     
     bloodTestParams.forEach(param => {

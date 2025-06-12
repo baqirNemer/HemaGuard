@@ -2,7 +2,7 @@
   "WBC": {
     "units": "10⁹/L",
     "normal_range": {
-      "All": "4.5-11.0"
+      "All": "4.0-11.0"
     }
   },
   "NE": {
@@ -15,12 +15,6 @@
     "units": "10⁹/L",
     "normal_range": {
       "All": "1.0-4.8"
-    }
-  },
-  "MO": {
-    "units": "10⁹/L",
-    "normal_range": {
-      "All": "0.2-0.9"
     }
   },
   "EO": {
@@ -43,6 +37,13 @@
       "Females": "12.1-15.1"
     }
   },
+  "HCT": {
+    "units": "%",
+    "normal_range": {
+      "Males": "41-50",
+      "Females": "36-44"
+    }
+  },
   "MCV": {
     "units": "fL",
     "normal_range": {
@@ -52,7 +53,7 @@
   "MCH": {
     "units": "pg/cell",
     "normal_range": {
-      "All": "26-33"
+      "All": "27-33"
     }
   },
   "MCHC": {
@@ -64,25 +65,26 @@
   "MENTZER_INDEX": {
     "units": null,
     "normal_range": {
-      "Interpretation": ">13 means likelihood of IDA (Iron Deficiency Anemia) while <13 indicates likelihood of Sickle Beta Thalassemia"
+      "Interpretation": ">13 means likelihood of Iron Deficiency Anemia while <13 indicates likelihood of Thalassemia trait. Keep in mind that this is not definitive, as there are other types of anemias"
     }
   },
-  "FERRITTE": {
+  "FERRITIN": {
     "units": "ng/mL",
     "normal_range": {
-      "All": "32-36"
+      "Males": "24-400",
+      "Females": "13-150"
     }
   },
   "FOLATE": {
     "units": "ng/mL",
     "normal_range": {
-      "All": "32-36"
+      "All": "2-4"
     }
   },
   "B12": {
     "units": "pg/mL",
     "normal_range": {
-      "All": "32-36"
+      "All": "200-900"
     }
   }
 }

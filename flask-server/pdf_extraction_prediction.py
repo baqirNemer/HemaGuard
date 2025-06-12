@@ -85,12 +85,12 @@ def predict_deficiency_type(FOLATE, B12):
     prediction = deficiency_type_model.predict([features])[0]
     return {name: bool(value) for name, value in zip(DEFICIENCY_TYPES, prediction)}
 
-def predict_anemia_name(GENDER, HGB, FERRITTE, MENTZER_INDEX, NORMOCHROMIC_ANEMIA,
+def predict_anemia_name(GENDER, HGB, FERRITIN, MENTZER_INDEX, NORMOCHROMIC_ANEMIA,
           HYPOCHROMIC_ANEMIA, NORMOCYTIC_ANEMIA, MICROCYTIC_ANEMIA, MACROCYTIC_ANEMIA):
     features = [
         int(GENDER) if GENDER is not None else -1,
         float(HGB) if HGB is not None else 0,
-        float(FERRITTE) if FERRITTE is not None else 0,
+        float(FERRITIN) if FERRITIN is not None else 0,
         float(MENTZER_INDEX) if MENTZER_INDEX is not None else 0,
         int(NORMOCHROMIC_ANEMIA) if NORMOCHROMIC_ANEMIA is not None else 0,
         int(HYPOCHROMIC_ANEMIA) if HYPOCHROMIC_ANEMIA is not None else 0,
@@ -164,7 +164,7 @@ def process_pdf(pdf_path):
                 values["B12"]
             )
 
-        anemia_name_params = ["GENDER", "HGB", "FERRITTE", "MENTZER_INDEX"]
+        anemia_name_params = ["GENDER", "HGB", "FERRITIN", "MENTZER_INDEX"]
         anemia_flags = {
             "NORMOCHROMIC": int(bool(results["anemia_type"]["NORMOCHROMIC ANEMIA"])) if results["anemia_type"] else 0,
             "HYPOCHROMIC": int(bool(results["anemia_type"]["HYPOCHROMIC ANEMIA"])) if results["anemia_type"] else 0,
@@ -177,7 +177,7 @@ def process_pdf(pdf_path):
             results["anemia_name"] = predict_anemia_name(
                 values["GENDER"],
                 values["HGB"],
-                values["FERRITTE"],
+                values["FERRITIN"],
                 values["MENTZER_INDEX"],
                 NORMOCHROMIC_ANEMIA=anemia_flags["NORMOCHROMIC"],
                 HYPOCHROMIC_ANEMIA=anemia_flags["HYPOCHROMIC"],

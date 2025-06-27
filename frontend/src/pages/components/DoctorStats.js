@@ -41,6 +41,12 @@ const months = [
   { value: 12, name: 'December' },
 ];
 
+function extractDoctorNote(description) {
+  const match = description?.match(/\[DoctorNote:"([^"]+)"\]/);
+  return match ? match[1] : '';
+}
+
+
 const DoctorStats = ({ stats, timeFilter, years, handleTimeFilterChange }) => {
   const getTimeLabel = () => {
     if (timeFilter.interval === 'all') return 'All time records';
@@ -191,12 +197,12 @@ const DoctorStats = ({ stats, timeFilter, years, handleTimeFilterChange }) => {
                   <React.Fragment key={log._id || idx}>
                     <ListItem alignItems="flex-start">
                       <ListItemText
-                        primary={log.patient_email}
-                        secondary={
+                        primary={"Email: " + log.patient_email}
+                        secondary={ 
+                         
                           <>
                             <Typography variant="body2" color="text.secondary">
-                              {log.description?.substring(0, 60) || ''}
-                              {log.description?.length > 60 ? '...' : ''}
+                               Doctor's Note: {extractDoctorNote(log.description)}
                             </Typography>
                             <Typography variant="caption" color="text.secondary">
                               {new Date(log.createdAt).toLocaleString()}
@@ -209,6 +215,7 @@ const DoctorStats = ({ stats, timeFilter, years, handleTimeFilterChange }) => {
                   </React.Fragment>
                 ))}
               </List>
+
             </CardContent>
           </Card>
         </Grid>

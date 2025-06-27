@@ -393,7 +393,6 @@ function Profile() {
                 >
                   <ListItemText
                     primary={`Date: ${formatDate(appointment.date)}`}
-                    secondary={`Time: ${appointment.time}`}
                     style={{ width: '200px' }}
                   />
                   <ListItemText
@@ -402,8 +401,7 @@ function Profile() {
                     style={{ width: '400px' }}
                   />
                   <ListItemText
-                    primary={`Status: ${appointment.status}`}
-                    secondary={`Reason: ${appointment.description}`}
+                    primary={`Reason: ${appointment.description}`}
                     style={{ width: '300px' }}
                   />
                 </ListItem>

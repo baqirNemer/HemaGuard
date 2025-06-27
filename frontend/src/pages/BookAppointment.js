@@ -29,22 +29,24 @@ const BookAppointment = () => {
   }, [id]);
 
   const handleAppointmentSubmit = async (e) => {
-    e.preventDefault();
-
-    try {
-      const response = await axios.post('http://localhost:3001/api/appointments', {
-        patient_email: patientEmail,
-        doctor_id: selectedDoctor,
-        description,
-        date,
-      });
-      setMessage('Appointment booked successfully!');
-      // Optionally, redirect to a different page after booking
-    } catch (error) {
-      setMessage('Error booking appointment. Please try again.');
-      console.error('Error booking appointment:', error);
-    }
-  };
+  e.preventDefault();
+  
+  try {
+    const emailToSend = userEmail ? userEmail.trim() : patientEmail.trim();
+    console.log('Final email being sent:', emailToSend);
+    
+    const response = await axios.post('http://localhost:3001/api/appointments', {
+      patient_email: emailToSend,
+      doctor_id: selectedDoctor,
+      description,
+      date,
+    });
+    setMessage('Appointment booked successfully!');
+  } catch (error) {
+    console.error('Full error:', error.response?.data || error.message);
+    setMessage(error.response?.data?.message || 'Error booking appointment');
+  }
+};
 
   const renderLoginMessage = () => {
     return (

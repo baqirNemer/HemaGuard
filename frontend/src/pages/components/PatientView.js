@@ -13,6 +13,22 @@ const PatientView = ({
   setSelectedRecord,
   formatDate,
 }) => {
+  // Helper function to extract AI predicted results
+  const extractAIPredictedResult = (description) => {
+    const result = {};
+    const pattern = /\[(InfectionType|AnemiaType|DeficiencyType):({.*?})\]/g;
+    let match;
+    
+    while ((match = pattern.exec(description)) !== null) {
+      try {
+        result[match[1]] = JSON.parse(match[2]);
+      } catch (e) {
+        console.error("Error parsing AI result:", e);
+      }
+    }
+    return result;
+  };
+
   return (
     <Paper mt={4} sx={{ marginTop: '100px', alignItems: 'center' }}>
       <Typography variant="h4" gutterBottom>Records</Typography>
@@ -32,14 +48,8 @@ const PatientView = ({
                     secondary={`Doctor Email: ${log.doctor_email}`}
                     style={{ width: '345px' }}
                   />
-                  
                 </ListItem>
               ))}
-              <ContainedButtons 
-                text="Analyze Records" 
-                onClick={() => setSelectedRecord(null)} 
-                sx={{ mt: 3 }}
-              />
             </List>
           ) : (
             <Typography>No records found.</Typography>
@@ -99,16 +109,66 @@ const PatientView = ({
             </Paper>
           </Box>
 
+          {/* Updated AI Predicted Result Section */}
           <Box sx={{ mb: 4, mt: 3 }}>
             <Typography variant="h6" gutterBottom>AI Predicted Result</Typography>
             <Paper elevation={3} sx={{ p: 2, backgroundColor: '#f5f5f5', ml: -2 }}>
-              {selectedRecord.description.includes('[DoctorNote:"') ? (
-                <Typography>
-                  {selectedRecord.description.split('[DoctorNote:"')[1].split('"]')[0]}
-                </Typography>
-              ) : (
-                <Typography>No doctor notes available</Typography>
-              )}
+              {(() => {
+                const aiResult = extractAIPredictedResult(selectedRecord.description);
+                
+                if (Object.keys(aiResult).length === 0) {
+                  return <Typography>No AI predicted results available</Typography>;
+                }
+
+                return (
+                  <Box>
+                    {/* Infection Type */}
+                    {aiResult.InfectionType && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography sx={{ fontWeight: 'bold' }}>Infection Type:</Typography>
+                        {Object.entries(aiResult.InfectionType)
+                          .filter(([_, value]) => value)
+                          .map(([label]) => (
+                            <Typography key={label} sx={{ pl: 2 }}>• {label}</Typography>
+                          ))}
+                        {!Object.values(aiResult.InfectionType).some(v => v) && (
+                          <Typography sx={{ pl: 2, fontStyle: 'italic' }}>None detected</Typography>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Anemia Type */}
+                    {aiResult.AnemiaType && (
+                      <Box sx={{ mb: 2 }}>
+                        <Typography sx={{ fontWeight: 'bold' }}>Anemia Type:</Typography>
+                        {Object.entries(aiResult.AnemiaType)
+                          .filter(([_, value]) => value)
+                          .map(([label]) => (
+                            <Typography key={label} sx={{ pl: 2 }}>• {label}</Typography>
+                          ))}
+                        {!Object.values(aiResult.AnemiaType).some(v => v) && (
+                          <Typography sx={{ pl: 2, fontStyle: 'italic' }}>None detected</Typography>
+                        )}
+                      </Box>
+                    )}
+
+                    {/* Deficiency Type */}
+                    {aiResult.DeficiencyType && (
+                      <Box>
+                        <Typography sx={{ fontWeight: 'bold' }}>Deficiency Type:</Typography>
+                        {Object.entries(aiResult.DeficiencyType)
+                          .filter(([_, value]) => value)
+                          .map(([label]) => (
+                            <Typography key={label} sx={{ pl: 2 }}>• {label}</Typography>
+                          ))}
+                        {!Object.values(aiResult.DeficiencyType).some(v => v) && (
+                          <Typography sx={{ pl: 2, fontStyle: 'italic' }}>None detected</Typography>
+                        )}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })()}
             </Paper>
           </Box>
 
